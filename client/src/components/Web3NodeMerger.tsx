@@ -1,21 +1,25 @@
-import { useState } from "react";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, Zap, Loader2 } from "lucide-react";
+import { TrendingUp, Zap, Loader2, LogOut } from "lucide-react";
+import WalletSelector from "./WalletSelector";
 
 export default function Web3NodeMerger() {
-  const { 
-    selectedNetwork, 
-    setSelectedNetwork, 
-    walletConnected, 
-    balance, 
-    account, 
+  const {
+    selectedNetwork,
+    setSelectedNetwork,
+    walletConnected,
+    balance,
+    account,
     connecting,
-    connectWallet, 
+    showSelector,
+    openWalletSelector,
+    closeWalletSelector,
+    handleWalletConnect,
     mergeToken,
-    NETWORKS 
+    disconnect,
+    NETWORKS
   } = useWeb3();
-  
+
   const { toast } = useToast();
 
   const handleNetworkChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -29,14 +33,6 @@ export default function Web3NodeMerger() {
     }
   };
 
-  const handleConnect = async () => {
-    try {
-      await connectWallet();
-    } catch (error) {
-      console.error("Connection failed:", error);
-    }
-  };
-
   const handleMerge = async () => {
     try {
       await mergeToken();
@@ -47,10 +43,16 @@ export default function Web3NodeMerger() {
 
   return (
     <section id="web3-merger" className="min-h-screen bg-background p-6 flex items-center justify-center">
+      <WalletSelector
+        isOpen={showSelector}
+        onClose={closeWalletSelector}
+        onConnect={handleWalletConnect}
+      />
+
       <div className="max-w-xl w-full">
         <div className="rounded-3xl border border-border bg-card p-8 sm:p-12 shadow-2xl text-center relative overflow-hidden">
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl"></div>
-          
+
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-6 text-foreground">
             Blockchain <span className="gradient-text">Management</span>
           </h1>
@@ -78,7 +80,7 @@ export default function Web3NodeMerger() {
             {!walletConnected ? (
               <button
                 className="premium-button w-full h-14 text-xl font-black"
-                onClick={handleConnect}
+                onClick={openWalletSelector}
                 disabled={connecting}
               >
                 {connecting ? (
@@ -102,7 +104,7 @@ export default function Web3NodeMerger() {
                       {account}
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="text-xs font-black uppercase tracking-widest text-primary mb-2 block">Total Balance</label>
                     <div className="text-4xl font-black tracking-tight text-foreground">
@@ -115,6 +117,14 @@ export default function Web3NodeMerger() {
                     onClick={handleMerge}
                   >
                     Execute Asset Merge
+                  </button>
+
+                  <button
+                    className="w-full h-12 text-sm font-black text-muted-foreground hover:text-red-500 hover:bg-red-500/10 border border-border rounded-2xl transition-all flex items-center justify-center gap-2"
+                    onClick={disconnect}
+                  >
+                    <LogOut size={16} />
+                    <span>Disconnect Wallet</span>
                   </button>
                 </div>
               </div>

@@ -11,7 +11,7 @@ import { useWeb3 } from "../hooks/useWeb3";
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("web3-merger");
-  const { walletConnected, connecting, connectWallet } = useWeb3();
+  const { walletConnected, connecting, openWalletSelector } = useWeb3();
 
   useEffect(() => {
     const handleResize = () => {

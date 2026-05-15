@@ -6,12 +6,10 @@ import AnalyticsSection from "./AnalyticsSection";
 import PlatformSection from "./PlatformSection";
 import FooterSection from "./FooterSection";
 import { ThemeToggle } from "./theme-toggle";
-import { useWeb3 } from "../hooks/useWeb3";
 
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("web3-merger");
-  const { walletConnected, connecting, connectWallet } = useWeb3();
 
   useEffect(() => {
     const handleResize = () => {
@@ -23,7 +21,7 @@ export default function Layout() {
     const handleScroll = () => {
       const sections = ['web3-merger', 'portfolio', 'analytics', 'platform', 'footer'];
       let currentSection = '';
-      
+
       sections.forEach(sectionId => {
         const section = document.getElementById(sectionId);
         if (section) {
@@ -33,7 +31,7 @@ export default function Layout() {
           }
         }
       });
-      
+
       if (currentSection) {
         setActiveSection(currentSection);
       }
@@ -41,7 +39,7 @@ export default function Layout() {
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleScroll);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleScroll);
@@ -58,30 +56,6 @@ export default function Layout() {
       }
     }
   };
-
-  const getWalletStatus = () => {
-    if (walletConnected) {
-      return {
-        className: "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-black bg-green-500 bg-opacity-20 text-green-500",
-        text: "Connected",
-        dotColor: "bg-green-500"
-      };
-    } else if (connecting) {
-      return {
-        className: "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-black bg-blue-500 bg-opacity-20 text-blue-500",
-        text: "Connecting",
-        dotColor: "bg-blue-500 animate-pulse"
-      };
-    } else {
-      return {
-        className: "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-black bg-red-500 bg-opacity-20 text-red-500",
-        text: "Disconnected",
-        dotColor: "bg-red-500"
-      };
-    }
-  };
-
-  const walletStatus = getWalletStatus();
 
   return (
     <div className="bg-background text-foreground overflow-x-hidden selection:bg-primary/20">
@@ -169,7 +143,7 @@ export default function Layout() {
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
@@ -185,20 +159,12 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-accent text-accent-foreground text-sm font-black border border-border/50">
-              <div className={`w-2 h-2 ${walletStatus.dotColor} rounded-full`}></div>
-              {walletStatus.text}
-            </div>
             <button
-              onClick={() => {
-                if (!walletConnected) {
-                  connectWallet();
-                }
-              }}
+              onClick={() => scrollToSection('web3-merger')}
               className="premium-button"
             >
               <Zap size={18} />
-              <span>{walletConnected ? 'Connected' : 'Connect'}</span>
+              <span>Connect</span>
             </button>
           </div>
         </header>

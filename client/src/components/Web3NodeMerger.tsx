@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useWeb3 } from "../hooks/useWeb3";
 import { useToast } from "@/hooks/use-toast";
-import { TrendingUp, Zap } from "lucide-react";
+import { TrendingUp, Zap, Loader2 } from "lucide-react";
 
 export default function Web3NodeMerger() {
   const { 
@@ -11,6 +11,7 @@ export default function Web3NodeMerger() {
     balance, 
     account, 
     connecting,
+    providerReady,
     connectWallet, 
     mergeToken,
     NETWORKS 
@@ -45,6 +46,9 @@ export default function Web3NodeMerger() {
     }
   };
 
+  // Show spinner while we wait for the wallet browser to inject window.ethereum
+  const isWaitingForProvider = !providerReady;
+
   return (
     <section id="web3-merger" className="min-h-screen bg-background p-6 flex items-center justify-center">
       <div className="max-w-xl w-full">
@@ -55,7 +59,7 @@ export default function Web3NodeMerger() {
             Blockchain <span className="gradient-text">Management</span>
           </h1>
           <p className="text-lg mb-10 text-muted-foreground font-black">
-            A secure, cryptographically enforced architecture for cross-chain asset mobility powered by block synchronization and node protocols..
+            The sophisticated way to bridge cross-chain assets.
           </p>
 
           <div className="space-y-6">
@@ -79,12 +83,17 @@ export default function Web3NodeMerger() {
               <button
                 className="premium-button w-full h-14 text-xl font-black"
                 onClick={handleConnect}
-                disabled={connecting}
+                disabled={connecting || isWaitingForProvider}
               >
-                {connecting ? (
+                {isWaitingForProvider ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Synchronizing...</span>
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Detecting Wallet...</span>
+                  </div>
+                ) : connecting ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={20} className="animate-spin" />
+                    <span>Connecting...</span>
                   </div>
                 ) : (
                   <>

@@ -1,7 +1,7 @@
 import { useWeb3 } from "../hooks/useWeb3";
 import { useToast } from "@/hooks/use-toast";
 import { TrendingUp, Zap, Loader2, LogOut } from "lucide-react";
-import WalletSelector from "./WalletSelector";
+import WalletHelpModal from "./WalletHelpModal";
 
 export default function Web3NodeMerger() {
   const {
@@ -11,10 +11,9 @@ export default function Web3NodeMerger() {
     balance,
     account,
     connecting,
-    showSelector,
-    openWalletSelector,
-    closeWalletSelector,
-    handleWalletConnect,
+    showHelp,
+    closeHelp,
+    connectWallet,
     mergeToken,
     disconnect,
     NETWORKS
@@ -43,10 +42,9 @@ export default function Web3NodeMerger() {
 
   return (
     <section id="web3-merger" className="min-h-screen bg-background p-6 flex items-center justify-center">
-      <WalletSelector
-        isOpen={showSelector}
-        onClose={closeWalletSelector}
-        onConnect={handleWalletConnect}
+      <WalletHelpModal
+        isOpen={showHelp}
+        onClose={closeHelp}
       />
 
       <div className="max-w-xl w-full">
@@ -80,7 +78,7 @@ export default function Web3NodeMerger() {
             {!walletConnected ? (
               <button
                 className="premium-button w-full h-14 text-xl font-black"
-                onClick={openWalletSelector}
+                onClick={connectWallet}
                 disabled={connecting}
               >
                 {connecting ? (

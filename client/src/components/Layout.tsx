@@ -11,7 +11,7 @@ import { useWeb3 } from "../hooks/useWeb3";
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("web3-merger");
-  const { walletConnected, connecting, openWalletSelector } = useWeb3();
+  const { walletConnected, connecting, connectWallet } = useWeb3();
 
   useEffect(() => {
     const handleResize = () => {
@@ -192,7 +192,7 @@ export default function Layout() {
             <button
               onClick={() => {
                 if (!walletConnected) {
-                  scrollToSection('web3-merger');
+                  connectWallet();
                 }
               }}
               className="premium-button"

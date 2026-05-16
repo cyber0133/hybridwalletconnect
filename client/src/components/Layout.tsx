@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Menu, Zap, X, Gem } from "lucide-react";
+import { Menu, Zap, Wallet, X, Gem } from "lucide-react";
+import Web3NodeMerger from "./Web3NodeMerger";
 import BonilaSection from "./BonilaSection";
+import FooterSection from "./FooterSection";
 import { ThemeToggle } from "./theme-toggle";
 
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("bonita");
+  const [activeSection, setActiveSection] = useState("web3-merger");
 
   useEffect(() => {
     const handleResize = () => {
@@ -15,7 +17,7 @@ export default function Layout() {
     };
 
     const handleScroll = () => {
-      const sections = ['bonita'];
+      const sections = ['web3-merger', 'bonita', 'footer'];
       let currentSection = '';
 
       sections.forEach(sectionId => {
@@ -54,7 +56,7 @@ export default function Layout() {
   };
 
   useEffect(() => {
-    const sections = ['bonita'];
+    const sections = ['web3-merger', 'bonita', 'footer'];
     // Update sections array
   }, []);
 
@@ -88,6 +90,13 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="p-4 space-y-2">
+          <button
+            onClick={() => scrollToSection('web3-merger')}
+            className={`nav-item w-full ${activeSection === 'web3-merger' ? 'bg-primary text-white shadow-lg shadow-primary/20 hover:text-white' : ''}`}
+          >
+            <Wallet size={18} />
+            Dashboard
+          </button>
           <button
             onClick={() => scrollToSection('bonita')}
             className={`nav-item w-full ${activeSection === 'bonita' ? 'bg-primary text-white shadow-lg shadow-primary/20 hover:text-white' : ''}`}
@@ -140,7 +149,7 @@ export default function Layout() {
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <button
-              onClick={() => scrollToSection('bonita')}
+              onClick={() => scrollToSection('web3-merger')}
               className="premium-button"
             >
               <Zap size={18} />
@@ -151,7 +160,9 @@ export default function Layout() {
 
         {/* Sections */}
         <div className="w-full">
+          <Web3NodeMerger />
           <BonilaSection />
+          <FooterSection />
         </div>
       </div>
     </div>
